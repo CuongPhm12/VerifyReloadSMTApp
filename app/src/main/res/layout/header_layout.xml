@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="#CCCCCC">
+
+    <TextView
+        android:id="@+id/txtHeaderWO"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:text="WO"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/txtHeaderLine"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:text="LINE"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/txtHeaderMachine"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:text="MACHINE"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/txtHeaderSlot"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:text="SLOT"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+</LinearLayout>
