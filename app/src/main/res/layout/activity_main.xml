@@ -177,4 +177,18 @@
             android:textSize="10sp"
             android:textStyle="bold" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/txtResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="TextView"
+        android:visibility="invisible" />
+
+    <Button
+        android:id="@+id/btnCheck"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Button"
+        android:visibility="invisible" />
 </LinearLayout>
