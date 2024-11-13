@@ -1,6 +1,7 @@
 package com.example.verifyreloadsmt;
 
 import android.app.ProgressDialog;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -21,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifyreloadsmt.api.ApiService;
+import com.example.verifyreloadsmt.model.DeleteItemReplaceVerifyResponse;
 import com.example.verifyreloadsmt.model.Get_TotalByMachine_Response;
 import com.example.verifyreloadsmt.model.RecyclerViewAdapter;
 import com.example.verifyreloadsmt.model.RecyclerViewAdapter_Get_TotalByMachine;
@@ -40,9 +42,10 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private RecyclerViewAdapter adapter;
     private RecyclerViewAdapter_Get_TotalByMachine adapter_Get_TotalByMachine;
-    private List<tblReplaceVerify> dataList;
-    private List<Get_TotalByMachine_Response> dataList_Get_TotalByMachine_Response;
-    TextView txtTotalByMachine, txtResult;
+    private List<tblReplaceVerify> dataList = new ArrayList<>();
+    private List<Get_TotalByMachine_Response> dataList_Get_TotalByMachine_Response = new ArrayList<>();
+    TextView txtTotalByMachine, txtResult, txtMessage, txtHeader;
+
     EditText edtWO, edtMachine, edtSlot, edtUPN;
     Button btnReset, btnExit, btnCheck;
     TextToSpeech t1;
@@ -54,8 +57,13 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+
+        txtHeader = findViewById(R.id.txtHeader);
+        txtHeader.setText("Verify Reload SMT" + " 1.01");
+
         txtResult = findViewById(R.id.txtResult);
         txtTotalByMachine = findViewById(R.id.txtTotalByMachine);
+        txtMessage = findViewById(R.id.txtMessage);
 
         edtWO = findViewById(R.id.edtWO);
         edtMachine = findViewById(R.id.edtMachine);
@@ -101,15 +109,16 @@ public class MainActivity extends AppCompatActivity {
         edtWO.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                if (keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) || i == EditorInfo.IME_ACTION_DONE) {
+                if (i == EditorInfo.IME_ACTION_DONE|| (keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) && keyEvent.getAction() == KeyEvent.ACTION_DOWN )) {
                     String wo = edtWO.getText().toString();
                     ProgressDialog progressDialog = ProgressDialog.show(MainActivity.this, "Please Wait", "Checking WO...", true);
-                    ApiService.apiService.getReload(wo).enqueue(new Callback<List<tblReplaceVerify>>() {
+                    ApiService.apiService.getReload("no-cache",wo).enqueue(new Callback<List<tblReplaceVerify>>() {
                         @Override
                         public void onResponse(Call<List<tblReplaceVerify>> call, Response<List<tblReplaceVerify>> response) {
                             progressDialog.dismiss();
                             if (response.isSuccessful() && response.body() != null) {
-                                dataList = new ArrayList<tblReplaceVerify>();
+//                                dataList = new ArrayList<tblReplaceVerify>();
+                                dataList.clear();
                                 dataList = response.body();
                                 if (!dataList.isEmpty()) {
                                     adapter = new RecyclerViewAdapter(dataList);
@@ -153,41 +162,85 @@ public class MainActivity extends AppCompatActivity {
         edtMachine.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                if (keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) || i == EditorInfo.IME_ACTION_DONE) {
-                   btnCheck.performClick();
+                if ((keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) )|| i == EditorInfo.IME_ACTION_DONE) {
+                    txtMessage.setText("");
+                    txtMessage.setBackgroundColor(Color.parseColor("#FFFFFF"));
+                    btnCheck.performClick();
 
                 }
                 return false;
             }
         });
         edtUPN.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                return false;
-            }
-        });
-        btnCheck.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
+                if ((keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) && keyEvent.getAction() == KeyEvent.ACTION_DOWN )|| i == EditorInfo.IME_ACTION_DONE) {
                     String wo = edtWO.getText().toString();
                     String machine = edtMachine.getText().toString();
-                    ProgressDialog progressDialog = ProgressDialog.show(MainActivity.this, "Please Wait", "Checking WO, Machine_ID...", true);
-                    ApiService.apiService.Get_TotalByMachine(wo, machine).enqueue(new Callback<List<Get_TotalByMachine_Response>>() {
+                    String slot = edtSlot.getText().toString().trim();
+                    String upn = edtUPN.getText().toString();
+                    ProgressDialog progressDialog = ProgressDialog.show(MainActivity.this, "Please wait", "Checking WO, Machine_ID, Slot, UPN...", true);
+                    ApiService.apiService.DeleteItemReplaceVerify(wo, machine, slot, upn).enqueue(new Callback<DeleteItemReplaceVerifyResponse>() {
                         @Override
-                        public void onResponse(Call<List<Get_TotalByMachine_Response>> call, Response<List<Get_TotalByMachine_Response>> response) {
+                        public void onResponse(Call<DeleteItemReplaceVerifyResponse> call, Response<DeleteItemReplaceVerifyResponse> response) {
                             progressDialog.dismiss();
                             if (response.isSuccessful() && response.body() != null) {
-                                dataList_Get_TotalByMachine_Response = new ArrayList<Get_TotalByMachine_Response>();
-                                dataList_Get_TotalByMachine_Response = response.body();
-                                if (!dataList_Get_TotalByMachine_Response.isEmpty()) {
-                                    adapter_Get_TotalByMachine = new RecyclerViewAdapter_Get_TotalByMachine(dataList_Get_TotalByMachine_Response);
-                                    recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));// Vertical scrolling
-                                    recyclerView.setAdapter(adapter_Get_TotalByMachine);
-                                    txtTotalByMachine.setText(dataList_Get_TotalByMachine_Response.get(0).getTotalByMachine());
-                                } else {
-                                    Toast.makeText(MainActivity.this, "Machine Not Found", Toast.LENGTH_SHORT).show();
-                                    Reload();
+                                String status = response.body().getpStatus();
+                                if ("OK".equals(status)) {
+                                    btnCheck.performClick();
+                                    txtResult.setText("OK");
+                                    speakResult();
+                                    edtUPN.setText("");
+                                    if (txtTotalByMachine.getText().toString().equals("1")) {
+                                        edtMachine.setText("");
+                                        edtSlot.setText("");
+                                        txtMessage.setText("Finish");
+                                        txtMessage.setBackgroundColor(Color.parseColor("#D4B5FF"));
+                                        speakMessage();
+                                        edtMachine.requestFocus();
+                                    } else {
+                                        edtSlot.setText("");
+                                        edtSlot.requestFocus();
+                                    }
+                                } else if ("ER".equals(status)) {
+                                    String pResult = response.body().getpResults();
+                                    txtResult.setText("NG");
+                                    String message = "";
+                                    switch (pResult) {
+                                        case "ER_NOT_EXISTS_LINE_ID":
+                                            message = "ER_NOT_EXISTS_LINE_ID";
+                                            edtSlot.setText("");
+                                            edtUPN.setText("");
+                                            edtSlot.requestFocus();
+                                            break;
+                                        case "ER_NOT_EXISTS_ENTITY_FOR_DELETE":
+                                            message = "ER_NOT_EXISTS_ENTITY_FOR_DELETE";
+                                            edtUPN.setText("");
+                                            edtUPN.requestFocus();
+                                            break;
+                                        case "ER_DELETE":
+                                            message = "ER_DELETE";
+                                            edtUPN.setText("");
+                                            edtUPN.requestFocus();
+                                            break;
+                                        case "ER_UPDATE":
+                                            message = "ER_UPDATE";
+                                            edtUPN.setText("");
+                                            edtUPN.requestFocus();
+                                            break;
+                                        default:
+                                            message = "UNKNOWN_ER";
+                                            edtUPN.setText("");
+                                            edtUPN.requestFocus();
+                                            break;
+
+                                    }
+
+                                    speakResult();
+                                    Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+
+
                                 }
 
                             } else {
@@ -200,23 +253,90 @@ public class MainActivity extends AppCompatActivity {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
-                                Reload();
+                                txtResult.setText("NG");
                                 Log.e("API_ERROR", "Response failed. Status code: " + response.code() + ", Error: " + errorMessage);
                                 Toast.makeText(MainActivity.this, "Error: Invalid response. Status code: " + response.code(), Toast.LENGTH_SHORT).show();
+                                speakResult();
+                                edtUPN.setText("");
+                                edtUPN.requestFocus();
                             }
+
                         }
+
 
                         @Override
-                        public void onFailure(Call<List<Get_TotalByMachine_Response>> call, Throwable t) {
+                        public void onFailure(Call<DeleteItemReplaceVerifyResponse> call, Throwable t) {
                             progressDialog.dismiss(); // Dismiss the dialog in case of failure
                             // Log the error message for debugging
-                            Reload();
                             Log.e("API_ERROR", "API Call Failed: ", t);
                             Toast.makeText(MainActivity.this, "Call API Failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                            edtUPN.setText("");
+                            edtUPN.requestFocus();
                         }
-
                     });
                 }
+                return false;
+            }
+        });
+        btnCheck.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                String wo_1 = edtWO.getText().toString();
+                String machine_1 = edtMachine.getText().toString();
+                ProgressDialog progressDialog = ProgressDialog.show(MainActivity.this, "Please Wait", "Checking WO, Machine_ID...", true);
+                ApiService.apiService.Get_TotalByMachine(wo_1, machine_1).enqueue(new Callback<List<Get_TotalByMachine_Response>>() {
+                    @Override
+                    public void onResponse(Call<List<Get_TotalByMachine_Response>> call, Response<List<Get_TotalByMachine_Response>> response) {
+                        progressDialog.dismiss();
+                        if (response.isSuccessful() && response.body() != null) {
+//                                dataList_Get_TotalByMachine_Response = new ArrayList<Get_TotalByMachine_Response>();
+                            dataList_Get_TotalByMachine_Response.clear();
+                            dataList_Get_TotalByMachine_Response.addAll(response.body());
+//                                dataList_Get_TotalByMachine_Response = response.body();
+                            if (!dataList_Get_TotalByMachine_Response.isEmpty()) {
+
+                                if (adapter_Get_TotalByMachine == null) {
+                                    adapter_Get_TotalByMachine = new RecyclerViewAdapter_Get_TotalByMachine(dataList_Get_TotalByMachine_Response);
+                                    recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));// Vertical scrolling
+                                    recyclerView.setAdapter(adapter_Get_TotalByMachine);
+                                } else {
+                                    adapter_Get_TotalByMachine.notifyDataSetChanged();
+                                }
+
+                                txtTotalByMachine.setText(dataList_Get_TotalByMachine_Response.get(0).getTotalByMachine());
+                            } else {
+                                Toast.makeText(MainActivity.this, "Machine Not Found", Toast.LENGTH_SHORT).show();
+                                Reload();
+                            }
+
+                        } else {
+                            // Extract detailed error message for debugging
+                            String errorMessage = "No error message";
+                            try {
+                                if (response.errorBody() != null) {
+                                    errorMessage = response.errorBody().string(); // Read the error message from response
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            //Reload();
+                            Log.e("API_ERROR", "Response failed. Status code: " + response.code() + ", Error: " + errorMessage);
+                            Toast.makeText(MainActivity.this, "Error: Invalid response. Status code: " + response.code(), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<Get_TotalByMachine_Response>> call, Throwable t) {
+                        progressDialog.dismiss(); // Dismiss the dialog in case of failure
+                        // Log the error message for debugging
+                        //Reload();
+                        Log.e("API_ERROR", "API Call Failed: ", t);
+                        Toast.makeText(MainActivity.this, "Call API Failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+
+                });
+            }
 
         });
         btnReset.setOnClickListener(new View.OnClickListener() {
@@ -226,7 +346,9 @@ public class MainActivity extends AppCompatActivity {
                 edtMachine.setText("");
                 edtSlot.setText("");
                 edtUPN.setText("");
-                Reload();
+                txtMessage.setText("");
+                txtMessage.setBackgroundColor(Color.parseColor("#FFFFFF"));
+                Reload_normal();
 
                 edtWO.requestFocus();
             }
@@ -243,11 +365,35 @@ public class MainActivity extends AppCompatActivity {
 
     private void Reload() {
         txtTotalByMachine.setText("0");
-        dataList.clear();
-        adapter.notifyDataSetChanged();
+        if (dataList != null) {
+            dataList.clear();
+        }
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
+        if (dataList_Get_TotalByMachine_Response != null) {
+            dataList_Get_TotalByMachine_Response.clear();
+        }
+        if (adapter_Get_TotalByMachine != null) {
+            adapter_Get_TotalByMachine.notifyDataSetChanged();
+        }
+    }
+    private void Reload_normal() {
+        txtTotalByMachine.setText("0");
+        if (dataList != null) {
+            dataList.clear();
 
-        dataList_Get_TotalByMachine_Response.clear();
-        adapter_Get_TotalByMachine.notifyDataSetChanged();
+                adapter = null;
+
+        }
+
+        if (dataList_Get_TotalByMachine_Response != null) {
+            dataList_Get_TotalByMachine_Response.clear();
+
+                adapter_Get_TotalByMachine= null;
+
+        }
+
     }
 
     private void speakResult() {
@@ -262,6 +408,22 @@ public class MainActivity extends AppCompatActivity {
                     text = "O K";  // Separate the letters with a space
 
                 }
+                t1.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+            } else {
+                Log.e("TTS", "Text is empty, cannot speak");
+//                Toast.makeText(MainActivity.this, "Text is empty, cannot speak", Toast.LENGTH_LONG).show();
+            }
+
+        } else {
+//            Log.e("TTS", "TextToSpeech not ready or text is empty");
+            Toast.makeText(MainActivity.this, "TextToSpeech not ready or text is empty", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void speakMessage() {
+        String text = txtMessage.getText().toString();
+        if (isTtsReady) {
+            if (!text.isEmpty()) {
                 t1.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
             } else {
                 Log.e("TTS", "Text is empty, cannot speak");

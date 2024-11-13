@@ -12,6 +12,7 @@ import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.Query;
 
 public interface ApiService {
@@ -25,7 +26,8 @@ public interface ApiService {
 
     //    http://172.28.10.17:5005/Service/PDA_GA_Service.asmx/GetReload?wo=2000975453
     @GET("Service/PDA_GA_Service.asmx/GetReload")
-    Call<List<tblReplaceVerify>> getReload(@Query("wo") String wo);
+    Call<List<tblReplaceVerify>> getReload(@Header("Cache-Control") String cacheControl,
+                                            @Query("wo") String wo);
 
     //    http://172.28.10.17:5005/Service/PDA_GA_Service.asmx/Get_TotalByMachine?wo=2000975453&machine_id=YS12F-3
     @GET("Service/PDA_GA_Service.asmx/Get_TotalByMachine")
