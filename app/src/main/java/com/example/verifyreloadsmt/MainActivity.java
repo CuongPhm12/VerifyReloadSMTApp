@@ -23,12 +23,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifyreloadsmt.api.ApiService;
 import com.example.verifyreloadsmt.model.DeleteItemReplaceVerifyResponse;
+import com.example.verifyreloadsmt.model.GetWoRunning_Response;
 import com.example.verifyreloadsmt.model.Get_TotalByMachine_Response;
 import com.example.verifyreloadsmt.model.RecyclerViewAdapter;
 import com.example.verifyreloadsmt.model.RecyclerViewAdapter_Get_TotalByMachine;
 import com.example.verifyreloadsmt.model.tblReplaceVerify;
 
 import java.io.IOException;
+import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -46,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Get_TotalByMachine_Response> dataList_Get_TotalByMachine_Response = new ArrayList<>();
     TextView txtTotalByMachine, txtResult, txtMessage, txtHeader;
 
-    EditText edtWO, edtMachine, edtSlot, edtUPN;
+    EditText edtWO, edtMachine, edtSlot, edtUPN, edtLineID;
     Button btnReset, btnExit, btnCheck;
     TextToSpeech t1;
     private boolean isTtsReady = false;  // Flag to check if TTS is ready
@@ -59,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         txtHeader = findViewById(R.id.txtHeader);
-        txtHeader.setText("Verify Reload SMT" + " 1.01");
+        txtHeader.setText("Verify Reload SMT" + " 1.02");
 
         txtResult = findViewById(R.id.txtResult);
         txtTotalByMachine = findViewById(R.id.txtTotalByMachine);
@@ -69,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
         edtMachine = findViewById(R.id.edtMachine);
         edtSlot = findViewById(R.id.edtSlot);
         edtUPN = findViewById(R.id.edtUPN);
+        edtLineID = findViewById(R.id.edtLineID);
 
         btnReset = findViewById(R.id.btnReset);
         btnExit = findViewById(R.id.btnExit);
@@ -106,32 +109,70 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        edtWO.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        edtLineID.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                if (i == EditorInfo.IME_ACTION_DONE|| (keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) && keyEvent.getAction() == KeyEvent.ACTION_DOWN )) {
-                    String wo = edtWO.getText().toString();
-                    ProgressDialog progressDialog = ProgressDialog.show(MainActivity.this, "Please Wait", "Checking WO...", true);
-                    ApiService.apiService.getReload("no-cache",wo).enqueue(new Callback<List<tblReplaceVerify>>() {
+                if(i==EditorInfo.IME_ACTION_DONE||(keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) && keyEvent.getAction()== KeyEvent.ACTION_DOWN)){
+                    String lineID = edtLineID.getText().toString();
+                    ProgressDialog progressDialog = ProgressDialog.show(MainActivity.this,"Please Wait","Checking LineID...", true);
+                    ApiService.apiService5003.GetWoRunning(lineID).enqueue(new Callback<GetWoRunning_Response>() {
                         @Override
-                        public void onResponse(Call<List<tblReplaceVerify>> call, Response<List<tblReplaceVerify>> response) {
+                        public void onResponse(Call<GetWoRunning_Response> call, Response<GetWoRunning_Response> response) {
                             progressDialog.dismiss();
-                            if (response.isSuccessful() && response.body() != null) {
+                            if(response.isSuccessful()&& response.body() != null){
+                                String wo = response.body().getResult().get(0);
+                                if(wo != null && !wo.isEmpty()){
+                                    edtWO.setText(wo);
+                                    ApiService.apiService.getReload("no-cache",wo).enqueue(new Callback<List<tblReplaceVerify>>() {
+                                        @Override
+                                        public void onResponse(Call<List<tblReplaceVerify>> call, Response<List<tblReplaceVerify>> response) {
+                                            progressDialog.dismiss();
+                                            if (response.isSuccessful() && response.body() != null) {
 //                                dataList = new ArrayList<tblReplaceVerify>();
-                                dataList.clear();
-                                dataList = response.body();
-                                if (!dataList.isEmpty()) {
-                                    adapter = new RecyclerViewAdapter(dataList);
-                                    recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));// Vertical scrolling
-                                    recyclerView.setAdapter(adapter);
-                                } else {
-                                    Toast.makeText(MainActivity.this, "WO Not Found", Toast.LENGTH_SHORT).show();
-                                    edtWO.requestFocus();
-                                }
+                                                dataList.clear();
+                                                dataList = response.body();
+                                                if (!dataList.isEmpty()) {
+                                                    adapter = new RecyclerViewAdapter(dataList);
+                                                    recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));// Vertical scrolling
+                                                    recyclerView.setAdapter(adapter);
+                                                    edtMachine.requestFocus();
+                                                } else {
+                                                    Toast.makeText(MainActivity.this, "WO Not Found", Toast.LENGTH_SHORT).show();
+                                                    edtWO.requestFocus();
+                                                }
 
-                            } else {
+                                            } else {
+                                                // Extract detailed error message for debugging
+                                                String errorMessage = "No error message";
+                                                try {
+                                                    if (response.errorBody() != null) {
+                                                        errorMessage = response.errorBody().string(); // Read the error message from response
+                                                    }
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+
+                                                Log.e("API_ERROR", "Response failed. Status code: " + response.code() + ", Error: " + errorMessage);
+                                                Toast.makeText(MainActivity.this, "Error: Invalid response. Status code: " + response.code(), Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onFailure(Call<List<tblReplaceVerify>> call, Throwable t) {
+                                            progressDialog.dismiss(); // Dismiss the dialog in case of failure
+                                            // Log the error message for debugging
+                                            Log.e("API_ERROR", "API Call Failed: ", t);
+                                            Toast.makeText(MainActivity.this, "Call API Failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                                        }
+
+                                    });
+                                }else{
+                                    Toast.makeText(MainActivity.this, "LineID Not Found", Toast.LENGTH_SHORT).show();
+                                    edtLineID.requestFocus();
+                                }
+                            }else{
                                 // Extract detailed error message for debugging
-                                String errorMessage = "No error message";
+                                String errorMessage = "No error message from LineID";
                                 try {
                                     if (response.errorBody() != null) {
                                         errorMessage = response.errorBody().string(); // Read the error message from response
@@ -139,21 +180,73 @@ public class MainActivity extends AppCompatActivity {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
-
+                                //Reload();
                                 Log.e("API_ERROR", "Response failed. Status code: " + response.code() + ", Error: " + errorMessage);
                                 Toast.makeText(MainActivity.this, "Error: Invalid response. Status code: " + response.code(), Toast.LENGTH_SHORT).show();
                             }
                         }
 
                         @Override
-                        public void onFailure(Call<List<tblReplaceVerify>> call, Throwable t) {
+                        public void onFailure(Call<GetWoRunning_Response> call, Throwable t) {
                             progressDialog.dismiss(); // Dismiss the dialog in case of failure
                             // Log the error message for debugging
+                            //Reload();
                             Log.e("API_ERROR", "API Call Failed: ", t);
                             Toast.makeText(MainActivity.this, "Call API Failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                         }
-
                     });
+                }
+                return false;
+            }
+        });
+        edtWO.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
+                if (i == EditorInfo.IME_ACTION_DONE|| (keyEvent != null && (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) && keyEvent.getAction() == KeyEvent.ACTION_DOWN )) {
+                    String wo = edtWO.getText().toString();
+                    ProgressDialog progressDialog = ProgressDialog.show(MainActivity.this, "Please Wait", "Checking WO...", true);
+//                    ApiService.apiService.getReload("no-cache",wo).enqueue(new Callback<List<tblReplaceVerify>>() {
+//                        @Override
+//                        public void onResponse(Call<List<tblReplaceVerify>> call, Response<List<tblReplaceVerify>> response) {
+//                            progressDialog.dismiss();
+//                            if (response.isSuccessful() && response.body() != null) {
+////                                dataList = new ArrayList<tblReplaceVerify>();
+//                                dataList.clear();
+//                                dataList = response.body();
+//                                if (!dataList.isEmpty()) {
+//                                    adapter = new RecyclerViewAdapter(dataList);
+//                                    recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));// Vertical scrolling
+//                                    recyclerView.setAdapter(adapter);
+//                                } else {
+//                                    Toast.makeText(MainActivity.this, "WO Not Found", Toast.LENGTH_SHORT).show();
+//                                    edtWO.requestFocus();
+//                                }
+//
+//                            } else {
+//                                // Extract detailed error message for debugging
+//                                String errorMessage = "No error message";
+//                                try {
+//                                    if (response.errorBody() != null) {
+//                                        errorMessage = response.errorBody().string(); // Read the error message from response
+//                                    }
+//                                } catch (IOException e) {
+//                                    e.printStackTrace();
+//                                }
+//
+//                                Log.e("API_ERROR", "Response failed. Status code: " + response.code() + ", Error: " + errorMessage);
+//                                Toast.makeText(MainActivity.this, "Error: Invalid response. Status code: " + response.code(), Toast.LENGTH_SHORT).show();
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onFailure(Call<List<tblReplaceVerify>> call, Throwable t) {
+//                            progressDialog.dismiss(); // Dismiss the dialog in case of failure
+//                            // Log the error message for debugging
+//                            Log.e("API_ERROR", "API Call Failed: ", t);
+//                            Toast.makeText(MainActivity.this, "Call API Failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+//                        }
+//
+//                    });
                 }
                 return false;
             }
@@ -342,6 +435,7 @@ public class MainActivity extends AppCompatActivity {
         btnReset.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                edtLineID.setText("");
                 edtWO.setText("");
                 edtMachine.setText("");
                 edtSlot.setText("");
@@ -350,7 +444,7 @@ public class MainActivity extends AppCompatActivity {
                 txtMessage.setBackgroundColor(Color.parseColor("#FFFFFF"));
                 Reload_normal();
 
-                edtWO.requestFocus();
+                edtLineID.requestFocus();
             }
         });
 

@@ -1,6 +1,7 @@
 package com.example.verifyreloadsmt.api;
 
 import com.example.verifyreloadsmt.model.DeleteItemReplaceVerifyResponse;
+import com.example.verifyreloadsmt.model.GetWoRunning_Response;
 import com.example.verifyreloadsmt.model.Get_TotalByMachine_Response;
 import com.example.verifyreloadsmt.model.tblReplaceVerify;
 import com.google.gson.Gson;
@@ -23,6 +24,11 @@ public interface ApiService {
             .build()
             .create(ApiService.class);
 
+    ApiService apiService5003 = new Retrofit.Builder()
+            .baseUrl("http://172.28.10.17:5003/")
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+            .create(ApiService.class);
 
     //    http://172.28.10.17:5005/Service/PDA_GA_Service.asmx/GetReload?wo=2000975453
     @GET("Service/PDA_GA_Service.asmx/GetReload")
@@ -40,4 +46,10 @@ public interface ApiService {
                                                                   @Query("machine") String machine_id,
                                                                   @Query("slot") String slot,
                                                                   @Query("upn") String upn);
+//    http://172.28.10.17:5003/Umes/GetWoRunning?line_id=S01
+    @GET("Umes/GetWoRunning")
+    Call<GetWoRunning_Response> GetWoRunning(@Query("line_id") String line_id);
+
+
+
 }
